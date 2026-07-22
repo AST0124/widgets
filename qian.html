@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>今日一签 ⊹</title>
+<style>
+  :root{
+    --paper:#f6f2ea; --ink:#3a3733; --faded:#8d8778;
+    --accent:#b5543b; --line:#c9c2b2;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Courier New","Courier Prime",Georgia,"Songti SC",serif;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:14px;
+  }
+  .slip{
+    width:min(560px,100%);
+    border:1.5px dashed var(--line); border-radius:6px;
+    padding:16px 20px 14px; background:var(--paper);
+  }
+  .row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px}
+  .eyebrow{font-size:11px; letter-spacing:.18em; color:var(--faded)}
+  .quote{
+    font-size:clamp(15px,4vw,18px); line-height:1.8;
+    min-height:3.6em; display:flex; align-items:center;
+  }
+  .foot{
+    border-top:1px dotted var(--line); margin-top:12px; padding-top:9px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; letter-spacing:.12em; color:var(--faded);
+  }
+  button{
+    all:unset; cursor:pointer; color:var(--accent);
+    font-size:11px; letter-spacing:.12em;
+    font-family:inherit; padding:2px 4px;
+  }
+  button:hover{text-decoration:underline dotted}
+  button:focus-visible{outline:1.5px dashed var(--accent); border-radius:3px}
+  @media (prefers-reduced-motion: no-preference){
+    .quote.swap{animation:fade .35s ease}
+    @keyframes fade{from{opacity:0; transform:translateY(3px)} to{opacity:1}}
+  }
+</style>
+</head>
+<body>
+<div class="slip">
+  <div class="row">
+    <span class="eyebrow">☆ 今日一签</span>
+    <span class="eyebrow" id="date"></span>
+  </div>
+  <div class="quote" id="quote"></div>
+  <div class="foot">
+    <span>( ᐢ. ̫ .ᐢ )♡</span>
+    <button id="again" aria-label="换一签">↻ 换一签</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   ☆ 只需要改这里：签文随便写，中英混着来 ☆
+   格式：引号包住，行尾逗号
+═══════════════════════════════════════════════ */
+const LINES = [
+  "宜拍照，忌回邮件。",
+  "shoot first, overthink later ⊹",
+  "宜写 essay，忌开第 27 个 tab。",
+  "the light is good today. go outside.",
+  "宜备份照片。真的，今天就备。",
+  "done is better than perfect, 交了再改。",
+  "宜喝水，忌和 deadline 对视太久。",
+  "you're doing better than you think ♡",
+  "宜整理 inbox，忌开新坑。",
+  "one roll, one essay, one apply. that's enough.",
+];
+/* ═══════════════════════════════════════════════ */
+
+const now = new Date();
+const seed = now.getFullYear()*10000 + (now.getMonth()+1)*100 + now.getDate();
+const q = document.getElementById("quote");
+let i = seed % LINES.length;
+
+document.getElementById("date").textContent =
+  String(now.getMonth()+1).padStart(2,"0") + "." + String(now.getDate()).padStart(2,"0");
+
+function show(){
+  q.classList.remove("swap");
+  void q.offsetWidth;
+  q.classList.add("swap");
+  q.textContent = LINES[i];
+}
+document.getElementById("again").addEventListener("click", () => {
+  i = (i + 1 + Math.floor(Math.random()*(LINES.length-1))) % LINES.length;
+  show();
+});
+show();
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>photo of the day ⊹</title>
+<style>
+  :root{
+    --paper:#f6f2ea; --ink:#3a3733; --faded:#8d8778;
+    --film:#211f1c; --accent:#b5543b;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Courier New", "Courier Prime", monospace;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:14px;
+  }
+  .frame{width:min(560px,100%)}
+  .label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12px; letter-spacing:.14em; color:var(--faded);
+    padding:0 2px 8px;
+  }
+  .label b{color:var(--ink); font-weight:normal}
+  /* film strip */
+  .film{background:var(--film); padding:14px 10px; border-radius:2px}
+  .sprockets{
+    height:10px;
+    background-image:radial-gradient(circle at 6px 5px, var(--paper) 3px, transparent 3.5px);
+    background-size:22px 10px; background-position:4px 0;
+  }
+  .window{margin:9px 6px; position:relative; overflow:hidden}
+  .window img{
+    display:block; width:100%; aspect-ratio:3/2; object-fit:cover;
+    filter:saturate(.94) contrast(1.02);
+  }
+  .empty{
+    aspect-ratio:3/2; display:flex; flex-direction:column; gap:8px;
+    align-items:center; justify-content:center;
+    color:var(--paper); font-size:13px; letter-spacing:.08em; text-align:center;
+  }
+  .caption{
+    display:flex; justify-content:space-between;
+    font-size:11px; letter-spacing:.14em; color:var(--faded);
+    padding:8px 2px 0;
+  }
+  .caption .heart{color:var(--accent)}
+  @media (prefers-reduced-motion: no-preference){
+    .window img{opacity:0; transition:opacity .6s ease}
+    .window img.on{opacity:1}
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="label"><span>⊹ photo of the day</span><b id="date"></b></div>
+  <div class="film">
+    <div class="sprockets"></div>
+    <div class="window" id="window"></div>
+    <div class="sprockets"></div>
+  </div>
+  <div class="caption"><span id="count"></span><span class="heart">shot by elisa ♡</span></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   ☆ 只需要改这里：把你照片的链接放进引号里 ☆
+   可以是 gallery 里的图片直链、或任何公开图片链接
+   每行一条，行尾逗号，想放多少放多少
+═══════════════════════════════════════════════ */
+const PHOTOS = [
+  "https://images.unsplash.com/photo-1495197359483-d092478c170a?w=1200",
+  "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1200",
+  "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=1200",
+];
+/* ═══════════════════════════════════════════════ */
+
+const now = new Date();
+const seed = now.getFullYear()*10000 + (now.getMonth()+1)*100 + now.getDate();
+const el = document.getElementById("window");
+
+document.getElementById("date").textContent =
+  String(now.getMonth()+1).padStart(2,"0") + "." + String(now.getDate()).padStart(2,"0");
+
+if (PHOTOS.length === 0){
+  el.innerHTML = '<div class="empty"><span>( ˘･_･˘ ) 还没有照片</span><span>打开这个文件把图片链接加进 PHOTOS 里</span></div>';
+  document.getElementById("count").textContent = "no.000";
+} else {
+  const i = seed % PHOTOS.length;
+  const img = new Image();
+  img.src = PHOTOS[i];
+  img.alt = "photo of the day";
+  img.onload = () => img.classList.add("on");
+  el.appendChild(img);
+  document.getElementById("count").textContent = "no." + String(i+1).padStart(3,"0") + " / " + String(PHOTOS.length).padStart(3,"0");
+}
+</script>
+</body>
+</html>

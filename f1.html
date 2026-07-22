@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>next lights out ⊹</title>
+<style>
+  :root{
+    --paper:#f6f2ea; --ink:#3a3733; --faded:#8d8778;
+    --accent:#b5543b; --line:#c9c2b2;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Courier New","Courier Prime",monospace;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:14px;
+  }
+  .ticket{
+    width:min(560px,100%);
+    border:1.5px dashed var(--line); border-radius:6px;
+    padding:18px 20px 16px; position:relative; background:var(--paper);
+  }
+  .ticket::before, .ticket::after{ /* 撕票缺口 */
+    content:""; position:absolute; top:50%; width:16px; height:16px;
+    background:var(--paper); border:1.5px dashed var(--line);
+    border-radius:50%; transform:translateY(-50%);
+  }
+  .ticket::before{left:-9px; clip-path:inset(0 0 0 50%)}
+  .ticket::after{right:-9px; clip-path:inset(0 50% 0 0)}
+  .row{display:flex; justify-content:space-between; align-items:baseline}
+  .eyebrow{font-size:11px; letter-spacing:.18em; color:var(--faded)}
+  .kao{font-size:13px; color:var(--faded)}
+  .race{
+    font-size:clamp(17px,4.5vw,22px); letter-spacing:.02em;
+    margin:10px 0 2px; text-transform:lowercase;
+  }
+  .circuit{font-size:12px; color:var(--faded); letter-spacing:.08em; text-transform:lowercase}
+  .count{
+    display:flex; gap:18px; margin:16px 0 10px;
+  }
+  .unit{text-align:center}
+  .unit b{
+    display:block; font-size:clamp(26px,8vw,38px); font-weight:normal;
+    color:var(--accent); font-variant-numeric:tabular-nums;
+  }
+  .unit span{font-size:10px; letter-spacing:.2em; color:var(--faded)}
+  .foot{
+    border-top:1px dotted var(--line); padding-top:9px;
+    font-size:11px; letter-spacing:.12em; color:var(--faded);
+    display:flex; justify-content:space-between;
+  }
+  .state{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="ticket">
+  <div class="row">
+    <span class="eyebrow">🏎 next lights out</span>
+    <span class="kao" id="kao">( ᐢ. ̫ .ᐢ )</span>
+  </div>
+  <div class="race" id="race">loading…</div>
+  <div class="circuit" id="circuit"></div>
+  <div class="count" id="count" hidden>
+    <div class="unit"><b id="d">–</b><span>days</span></div>
+    <div class="unit"><b id="h">–</b><span>hrs</span></div>
+    <div class="unit"><b id="m">–</b><span>min</span></div>
+    <div class="unit"><b id="s">–</b><span>sec</span></div>
+  </div>
+  <div class="foot"><span id="when"></span><span class="state" id="state"></span></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function load(){
+  try{
+    const res = await fetch("https://api.jolpi.ca/ergast/f1/current.json");
+    const data = await res.json();
+    const races = data.MRData.RaceTable.Races;
+    const now = new Date();
+    // 找下一场：正赛结束前都算"当前场次"（含比赛日当天）
+    const next = races.find(r => {
+      const t = new Date(r.date + "T" + (r.time || "14:00:00Z"));
+      return t.getTime() + 3*3600*1000 > now.getTime();
+    });
+    if(!next){
+      $("race").textContent = "season over ᶻ 𝗓 𐰁";
+      $("state").textContent = "see you next year";
+      return;
+    }
+    const start = new Date(next.date + "T" + (next.time || "14:00:00Z"));
+    $("race").textContent = next.raceName;
+    $("circuit").textContent = next.Circuit.circuitName + " · " + next.Circuit.Location.country;
+    $("when").textContent = start.toLocaleString("en-GB",
+      {weekday:"short", day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}).toLowerCase() + " (your time)";
+    $("count").hidden = false;
+
+    function tick(){
+      const diff = start - new Date();
+      if(diff <= 0){
+        $("d").textContent = $("h").textContent = $("m").textContent = $("s").textContent = "0";
+        $("state").textContent = "it's lights out!!";
+        $("kao").textContent = "ᕙ(˶ˆ꒳ˆ˵)ᕗ";
+        return;
+      }
+      const dd = Math.floor(diff/86400000);
+      $("d").textContent = dd;
+      $("h").textContent = Math.floor(diff/3600000)%24;
+      $("m").textContent = Math.floor(diff/60000)%60;
+      $("s").textContent = Math.floor(diff/1000)%60;
+      if(dd === 0){ $("state").textContent="race day ⊹"; $("kao").textContent="ᕙ(˶ˆ꒳ˆ˵)ᕗ"; }
+      else if(dd < 7){ $("state").textContent="race week"; $("kao").textContent="( ⸝⸝´꒳`⸝⸝)"; }
+      requestAnimationFrame(()=>setTimeout(tick, 250));
+    }
+    tick();
+  }catch(e){
+    $("race").textContent = "couldn't reach the paddock ( ˘･_･˘ )";
+    $("state").textContent = "refresh to retry";
+  }
+}
+load();
+</script>
+</body>
+</html>
