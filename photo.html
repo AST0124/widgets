@@ -23,14 +23,18 @@
     padding:0 2px 8px;
   }
   .label b{color:var(--ink); font-weight:normal}
-  /* film strip */
   .film{background:var(--film); padding:14px 10px; border-radius:2px}
   .sprockets{
     height:10px;
     background-image:radial-gradient(circle at 6px 5px, var(--paper) 3px, transparent 3.5px);
     background-size:22px 10px; background-position:4px 0;
   }
-  .window{margin:9px 6px; position:relative; overflow:hidden}
+  .window{
+    margin:9px 6px; position:relative; overflow:hidden;
+    cursor:pointer; border:none; padding:0; width:calc(100% - 12px);
+    background:var(--film); display:block;
+  }
+  .window:focus-visible{outline:2px dashed var(--paper); outline-offset:3px}
   .window img{
     display:block; width:100%; aspect-ratio:3/2; object-fit:cover;
     filter:saturate(.94) contrast(1.02);
@@ -47,52 +51,64 @@
   }
   .caption .heart{color:var(--accent)}
   @media (prefers-reduced-motion: no-preference){
-    .window img{opacity:0; transition:opacity .6s ease}
+    .window img{opacity:0; transition:opacity .45s ease}
     .window img.on{opacity:1}
   }
 </style>
 </head>
 <body>
 <div class="frame">
-  <div class="label"><span>⊹ photo of the day</span><b id="date"></b></div>
+  <div class="label"><span>⊹ photo of the day · tap to flip</span><b id="date"></b></div>
   <div class="film">
     <div class="sprockets"></div>
-    <div class="window" id="window"></div>
+    <button class="window" id="window" aria-label="下一张照片"></button>
     <div class="sprockets"></div>
   </div>
   <div class="caption"><span id="count"></span><span class="heart">shot by elisa ♡</span></div>
 </div>
-
+ 
 <script>
 /* ═══════════════════════════════════════════════
    ☆ 只需要改这里：把你照片的链接放进引号里 ☆
-   可以是 gallery 里的图片直链、或任何公开图片链接
+   相对路径指向 repo 里的 img 文件夹，如 "img/xxx.jpg"
    每行一条，行尾逗号，想放多少放多少
 ═══════════════════════════════════════════════ */
 const PHOTOS = [
   "https://files.catbox.moe/jsfhyl.jpeg",
   "img/brighton1.jpg",
+  "img/brighton2.jpg",
+  "img/casey1.jpg",
 ];
 /* ═══════════════════════════════════════════════ */
-
+ 
 const now = new Date();
 const seed = now.getFullYear()*10000 + (now.getMonth()+1)*100 + now.getDate();
 const el = document.getElementById("window");
-
+const count = document.getElementById("count");
+ 
 document.getElementById("date").textContent =
   String(now.getMonth()+1).padStart(2,"0") + "." + String(now.getDate()).padStart(2,"0");
-
+ 
 if (PHOTOS.length === 0){
   el.innerHTML = '<div class="empty"><span>( ˘･_･˘ ) 还没有照片</span><span>打开这个文件把图片链接加进 PHOTOS 里</span></div>';
-  document.getElementById("count").textContent = "no.000";
+  count.textContent = "no.000";
 } else {
-  const i = seed % PHOTOS.length;
+  let i = seed % PHOTOS.length;   // 每天的起始照片仍按日期定
   const img = new Image();
-  img.src = PHOTOS[i];
   img.alt = "photo of the day";
-  img.onload = () => img.classList.add("on");
   el.appendChild(img);
-  document.getElementById("count").textContent = "no." + String(i+1).padStart(3,"0") + " / " + String(PHOTOS.length).padStart(3,"0");
+ 
+  function show(){
+    img.classList.remove("on");
+    img.src = PHOTOS[i];
+    img.onload = () => img.classList.add("on");
+    count.textContent = "no." + String(i+1).padStart(3,"0") + " / " + String(PHOTOS.length).padStart(3,"0");
+  }
+  el.addEventListener("click", () => {
+    i = (i + 1) % PHOTOS.length;  // 点一下翻下一张，翻到底回到第一张
+    show();
+  });
+  show();
 }
 </script>
 </body>
