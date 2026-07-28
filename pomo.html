@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>focus ticket ⊹</title>
+<style>
+  :root{
+    --paper:#f6f2ea; --ink:#3a3733; --faded:#8d8778;
+    --accent:#b5543b; --line:#c9c2b2; --break:#6f8a6b;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Courier New","Courier Prime",monospace;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:14px;
+  }
+  .ticket{
+    width:min(560px,100%);
+    border:1.5px dashed var(--line); border-radius:6px;
+    padding:16px 20px 14px; background:var(--paper); position:relative;
+  }
+  .ticket::before,.ticket::after{
+    content:""; position:absolute; top:50%; width:16px; height:16px;
+    background:var(--paper); border:1.5px dashed var(--line);
+    border-radius:50%; transform:translateY(-50%);
+  }
+  .ticket::before{left:-9px; clip-path:inset(0 0 0 50%)}
+  .ticket::after{right:-9px; clip-path:inset(0 50% 0 0)}
+  .row{display:flex; justify-content:space-between; align-items:baseline}
+  .eyebrow{font-size:11px; letter-spacing:.18em; color:var(--faded)}
+  .kao{font-size:14px; color:var(--faded)}
+  .time{
+    text-align:center; font-size:clamp(44px,14vw,64px);
+    font-variant-numeric:tabular-nums; letter-spacing:.04em;
+    margin:10px 0 2px; color:var(--ink);
+  }
+  .time.focus{color:var(--accent)}
+  .time.break{color:var(--break)}
+  .msg{
+    text-align:center; font-size:12px; color:var(--faded);
+    letter-spacing:.08em; min-height:1.6em; margin-bottom:12px;
+  }
+  .controls{display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap}
+  button{
+    all:unset; cursor:pointer; font-family:inherit;
+    font-size:12px; letter-spacing:.14em;
+    border:1.5px dashed var(--line); border-radius:5px;
+    padding:6px 14px; color:var(--ink);
+  }
+  button:hover{border-color:var(--accent); color:var(--accent)}
+  button:focus-visible{outline:1.5px dashed var(--accent); outline-offset:2px}
+  button.primary{border-style:solid; border-color:var(--accent); color:var(--accent)}
+  .foot{
+    border-top:1px dotted var(--line); padding-top:9px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; letter-spacing:.14em; color:var(--faded);
+  }
+  .modes button{border:none; padding:2px 6px; font-size:11px; color:var(--faded)}
+  .modes button.on{color:var(--accent); text-decoration:underline dotted}
+</style>
+</head>
+<body>
+<div class="ticket">
+  <div class="row">
+    <span class="eyebrow">⊹ focus ticket</span>
+    <span class="kao" id="kao">( ᐢ. ̫ .ᐢ )</span>
+  </div>
+  <div class="time" id="time">25:00</div>
+  <div class="msg" id="msg">准备好了就按 start ⊹</div>
+  <div class="controls">
+    <button class="primary" id="startBtn">start</button>
+    <button id="resetBtn">reset</button>
+    <button id="skipBtn">skip →</button>
+  </div>
+  <div class="foot">
+    <span class="modes">
+      <button data-f="25" data-b="5" class="on">25/5</button>
+      <button data-f="50" data-b="10">50/10</button>
+    </span>
+    <span id="tally">today ·</span>
+  </div>
+</div>
+
+<script>
+/* ── 完成一个 focus 后随机抽一句 ── */
+const DONE_LINES = [
+  "一格胶卷曝光完毕 ⊹ 起来喝口水",
+  "宜伸懒腰，忌立刻刷手机。",
+  "you're doing better than you think ♡",
+  "走的人多了，也便成了路。这是一步。",
+  "done > perfect. 休息是流程的一部分。",
+];
+const $ = id => document.getElementById(id);
+let FOCUS = 25*60, BREAK = 5*60;
+let mode = "focus", endAt = null, left = FOCUS, timer = null, done = 0;
+
+const KAO = {idle:"( ᐢ. ̫ .ᐢ )", focus:"(ง •̀_•́)ง", brk:"( ˶ᵔ ᵕ ᵔ˶ ) 🍵", win:"ᕙ(˶ˆ꒳ˆ˵)ᕗ"};
+
+function fmt(s){ s=Math.max(0,Math.ceil(s)); return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+
+function paint(){
+  $("time").textContent = fmt(left);
+  $("time").className = "time " + (timer ? (mode==="focus"?"focus":"break") : "");
+  $("tally").textContent = "today · " + (done ? "⊹".repeat(Math.min(done,12)) + (done>12?" +"+(done-12):"") : "–");
+}
+
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 660; g.gain.value = 0.06;
+    o.start(); o.stop(ctx.currentTime + 0.18);
+  }catch(e){}
+}
+
+function tick(){
+  left = (endAt - Date.now())/1000;
+  if(left <= 0){
+    clearInterval(timer); timer = null; beep();
+    if(mode === "focus"){
+      done++; mode = "break"; left = BREAK;
+      $("kao").textContent = KAO.win;
+      $("msg").textContent = DONE_LINES[Math.floor(Math.random()*DONE_LINES.length)];
+    } else {
+      mode = "focus"; left = FOCUS;
+      $("kao").textContent = KAO.idle;
+      $("msg").textContent = "休息完毕，下一格随时开 ⊹";
+    }
+    $("startBtn").textContent = "start";
+    paint(); return;
+  }
+  paint();
+}
+
+$("startBtn").addEventListener("click", () => {
+  if(timer){ // pause
+    clearInterval(timer); timer = null; left = (endAt - Date.now())/1000;
+    $("startBtn").textContent = "resume"; $("kao").textContent = KAO.idle;
+    $("msg").textContent = "暂停中 — 世界可以等一下";
+  } else {
+    endAt = Date.now() + left*1000;
+    timer = setInterval(tick, 250);
+    $("startBtn").textContent = "pause";
+    $("kao").textContent = mode==="focus" ? KAO.focus : KAO.brk;
+    $("msg").textContent = mode==="focus" ? "专注中 · 别开新 tab 哦" : "break · 离屏幕远一点";
+  }
+  paint();
+});
+
+$("resetBtn").addEventListener("click", () => {
+  clearInterval(timer); timer = null;
+  left = mode==="focus" ? FOCUS : BREAK;
+  $("startBtn").textContent = "start"; $("kao").textContent = KAO.idle;
+  $("msg").textContent = "重置好了 ⊹";
+  paint();
+});
+
+$("skipBtn").addEventListener("click", () => {
+  clearInterval(timer); timer = null;
+  mode = mode==="focus" ? "break" : "focus";
+  left = mode==="focus" ? FOCUS : BREAK;
+  $("startBtn").textContent = "start";
+  $("kao").textContent = KAO.idle;
+  $("msg").textContent = mode==="focus" ? "focus 格就位" : "直接进休息,也行 lol";
+  paint();
+});
+
+document.querySelectorAll(".modes button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".modes button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    FOCUS = +b.dataset.f*60; BREAK = +b.dataset.b*60;
+    clearInterval(timer); timer = null; mode = "focus"; left = FOCUS;
+    $("startBtn").textContent = "start"; $("kao").textContent = KAO.idle;
+    $("msg").textContent = b.dataset.f + " 分钟一格,适合" + (b.dataset.f==="50"?"深潜":"日常");
+    paint();
+  });
+});
+
+paint();
+</script>
+</body>
+</html>
