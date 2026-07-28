@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>weather</title>
+<style>
+  :root{
+    --bg: transparent;
+    --ink: #37352f;
+    --muted: #9b9a97;
+    --faint: #c4c2bf;
+    --line: rgba(55,53,47,0.11);
+    --night: #d3d6dc;
+    --blue: #7a94b8;
+    --gold: #d9a441;
+    --day: #f0eeea;
+    --chip: rgba(55,53,47,0.04);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink: #e4e0da;
+      --muted: #8d8880;
+      --faint: #5f5b55;
+      --line: rgba(228,224,218,0.13);
+      --night: #262b35;
+      --blue: #4b6b98;
+      --gold: #c99435;
+      --day: #b9c0c8;
+      --chip: rgba(228,224,218,0.05);
+    }
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background: var(--bg); }
+  body{
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.45;
+    padding: 14px 14px 12px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:8px; margin-bottom:12px;
+  }
+  .title{ color: var(--muted); letter-spacing:.04em; font-size:11.5px; }
+  .place{ color: var(--faint); font-size:10.5px; letter-spacing:.03em; }
+
+  /* now block */
+  .now{ display:flex; align-items:flex-end; gap:10px; margin-bottom:3px; }
+  .temp{ font-size:34px; line-height:.9; letter-spacing:-.02em; font-weight:400; }
+  .temp sup{ font-size:14px; top:-.9em; color: var(--muted); }
+  .cond{ padding-bottom:3px; }
+  .cond .word{ font-size:13px; }
+  .cond .glyph{ color: var(--muted); margin-right:5px; }
+  .meta{ color: var(--muted); font-size:11px; margin-bottom:14px; }
+  .meta span + span::before{ content:"·"; margin:0 6px; color: var(--faint); }
+
+  /* light strip */
+  .strip-wrap{ margin-bottom:5px; }
+  .strip{
+    position:relative; height:9px; border-radius:1px; overflow:visible;
+    background: var(--chip);
+  }
+  .strip .band{ position:absolute; inset:0; border-radius:1px; }
+  .strip .tick{
+    position:absolute; top:-3px; bottom:-3px; width:1px;
+    background: var(--ink); opacity:.28;
+  }
+  .strip .now-mark{
+    position:absolute; top:-5px; bottom:-5px; width:1.5px;
+    background: var(--ink); transition: left .6s ease;
+  }
+  .strip .now-mark::after{
+    content:""; position:absolute; left:50%; bottom:-4px;
+    transform: translateX(-50%);
+    border-left:2.5px solid transparent; border-right:2.5px solid transparent;
+    border-bottom:3px solid var(--ink);
+  }
+  .light-lines{ color: var(--muted); font-size:10.5px; margin-top:9px; }
+  .light-lines div{ display:flex; justify-content:space-between; gap:10px; }
+  .light-lines .k{ color: var(--faint); }
+  .gold-dot::before{ content:"◆"; color: var(--gold); margin-right:5px; font-size:8px; vertical-align:1px; }
+  .blue-dot::before{ content:"◆"; color: var(--blue); margin-right:5px; font-size:8px; vertical-align:1px; }
+
+  hr{ border:0; border-top:1px solid var(--line); margin:13px 0 10px; }
+
+  /* forecast */
+  .days{ display:flex; gap:2px; }
+  .day{
+    flex:1 1 0; min-width:0; text-align:center; padding:5px 2px 6px;
+    border-radius:2px;
+  }
+  .day.is-today{ background: var(--chip); }
+  .day .dow{ font-size:10px; color: var(--muted); letter-spacing:.03em; }
+  .day .g{ font-size:12px; color: var(--ink); opacity:.75; margin:3px 0 2px; }
+  .day .hi{ font-size:11.5px; }
+  .day .lo{ font-size:11.5px; color: var(--faint); }
+  .day .pop{ font-size:9.5px; color: var(--blue); min-height:12px; }
+
+  .state{ color: var(--muted); font-size:11.5px; padding:6px 0; }
+  .state button{
+    font: inherit; font-size:11px; color: var(--ink);
+    background: var(--chip); border:1px solid var(--line);
+    border-radius:3px; padding:2px 8px; margin-left:6px; cursor:pointer;
+  }
+  .state button:hover{ border-color: var(--muted); }
+  :focus-visible{ outline:1.5px solid var(--gold); outline-offset:2px; }
+
+  .skeleton{ opacity:.4; }
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────────────────────────
+     edit these two lines to move the widget
+     ─────────────────────────────────────────── -->
+<script>
+  const LAT   = 51.4946;      // elephant & castle
+  const LON   = -0.0997;
+  const PLACE = "se1";        // label shown top-right
+</script>
+
+<header>
+  <div class="title">☀ light &amp; weather</div>
+  <div class="place mono" id="place"></div>
+</header>
+
+<div id="root">
+  <div class="state">loading…</div>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const root = $("#root");
+  $("#place").textContent = PLACE;
+
+  /* ── weather codes ─────────────────────────── */
+  const WMO = {
+    0:["clear","○"], 1:["mostly clear","○"], 2:["partly cloudy","◐"], 3:["overcast","●"],
+    45:["fog","≡"], 48:["rime fog","≡"],
+    51:["light drizzle","⋮"], 53:["drizzle","⋮"], 55:["heavy drizzle","⋮"],
+    56:["freezing drizzle","⋮"], 57:["freezing drizzle","⋮"],
+    61:["light rain","╱"], 63:["rain","╱"], 65:["heavy rain","╱"],
+    66:["freezing rain","╱"], 67:["freezing rain","╱"],
+    71:["light snow","✳"], 73:["snow","✳"], 75:["heavy snow","✳"], 77:["snow grains","✳"],
+    80:["showers","╱"], 81:["showers","╱"], 82:["heavy showers","╱"],
+    85:["snow showers","✳"], 86:["snow showers","✳"],
+    95:["thunderstorm","⚡"], 96:["thunderstorm","⚡"], 99:["thunderstorm","⚡"]
+  };
+  const code = c => WMO[c] || ["—","·"];
+
+  /* ── sun position (NOAA approximation) ─────── */
+  function altitude(date){
+    const rad = Math.PI/180;
+    const yearStart = new Date(date.getFullYear(), 0, 0);
+    const doy = Math.floor((date - yearStart) / 86400000);
+    const h = date.getHours() + date.getMinutes()/60 + date.getSeconds()/3600;
+    const tz = -date.getTimezoneOffset()/60;
+    const g = 2*Math.PI/365 * (doy - 1 + (h-12)/24);
+    const eq = 229.18*(0.000075 + 0.001868*Math.cos(g) - 0.032077*Math.sin(g)
+             - 0.014615*Math.cos(2*g) - 0.040849*Math.sin(2*g));
+    const decl = 0.006918 - 0.399912*Math.cos(g) + 0.070257*Math.sin(g)
+               - 0.006758*Math.cos(2*g) + 0.000907*Math.sin(2*g)
+               - 0.002697*Math.cos(3*g) + 0.00148*Math.sin(3*g);
+    const tst = h*60 + eq + 4*LON - 60*tz;
+    const ha  = (tst/4) - 180;
+    const cz  = Math.sin(LAT*rad)*Math.sin(decl)
+              + Math.cos(LAT*rad)*Math.cos(decl)*Math.cos(ha*rad);
+    return 90 - Math.acos(Math.max(-1, Math.min(1, cz)))/rad;
+  }
+
+  // sample every minute across the local day
+  function sunCurve(){
+    const base = new Date(); base.setHours(0,0,0,0);
+    const out = new Array(1441);
+    for(let m=0; m<=1440; m++){
+      out[m] = altitude(new Date(base.getTime() + m*60000));
+    }
+    return { base, alts: out };
+  }
+
+  // first minute where the curve crosses `th`, rising or falling
+  function cross(alts, th, rising){
+    for(let m=1; m<=1440; m++){
+      const a = alts[m-1], b = alts[m];
+      if(rising ? (a < th && b >= th) : (a >= th && b < th)) return m;
+    }
+    return null;
+  }
+
+  const hhmm = m => m == null ? "—"
+    : String(Math.floor(m/60)).padStart(2,"0") + ":" + String(m%60).padStart(2,"0");
+
+  /* ── colour ramp for the light strip ───────── */
+  const css = getComputedStyle(document.documentElement);
+  const tone = n => css.getPropertyValue(n).trim();
+  function rgb(hex){
+    const h = hex.replace("#","");
+    return [0,2,4].map(i => parseInt(h.slice(i,i+2),16));
+  }
+  function mix(a, b, t){
+    t = Math.max(0, Math.min(1, t));
+    const A = rgb(a), B = rgb(b);
+    return `rgb(${A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")})`;
+  }
+  function lightColor(a){
+    const night = tone("--night"), blue = tone("--blue"),
+          gold  = tone("--gold"),  day  = tone("--day");
+    if(a <= -9)      return night;
+    if(a <= -0.833)  return mix(night, blue, (a + 9) / 8.167);
+    if(a <= 6)       return mix(blue, gold, (a + 0.833) / 6.833);
+    return mix(gold, day, (a - 6) / 22);
+  }
+
+  /* ── render ────────────────────────────────── */
+  function render(d){
+    const { base, alts } = sunCurve();
+
+    const sunrise   = cross(alts, -0.833, true);
+    const sunset    = cross(alts, -0.833, false);
+    const goldEndAM = cross(alts, 6, true);
+    const goldStPM  = cross(alts, 6, false);
+    const blueStAM  = cross(alts, -6, true);
+    const blueEndPM = cross(alts, -6, false);
+
+    let stops = [];
+    for(let m=0; m<=1440; m+=15){
+      stops.push(`${lightColor(alts[m])} ${(m/1440*100).toFixed(2)}%`);
+    }
+
+    const now  = new Date();
+    const nowM = now.getHours()*60 + now.getMinutes();
+    const cur  = d.current, dy = d.daily;
+    const [word, glyph] = code(cur.weather_code);
+
+    const ticks = [sunrise, sunset].filter(v => v != null)
+      .map(m => `<div class="tick" style="left:${(m/1440*100).toFixed(2)}%"></div>`).join("");
+
+    const days = dy.time.map((iso, i) => {
+      const dt = new Date(iso + "T12:00:00");
+      const dow = dt.toLocaleDateString("en-GB", { weekday:"short" }).toLowerCase();
+      const [, g] = code(dy.weather_code[i]);
+      const pop = dy.precipitation_probability_max?.[i];
+      return `<div class="day${i===0?" is-today":""}">
+        <div class="dow">${i===0 ? "today" : dow}</div>
+        <div class="g">${g}</div>
+        <div class="hi mono">${Math.round(dy.temperature_2m_max[i])}°</div>
+        <div class="lo mono">${Math.round(dy.temperature_2m_min[i])}°</div>
+        <div class="pop mono">${pop != null && pop >= 15 ? pop + "%" : ""}</div>
+      </div>`;
+    }).join("");
+
+    const todayPop = dy.precipitation_probability_max?.[0];
+
+    root.innerHTML = `
+      <div class="now">
+        <div class="temp mono">${Math.round(cur.temperature_2m)}<sup>°</sup></div>
+        <div class="cond"><span class="glyph">${glyph}</span><span class="word">${word}</span></div>
+      </div>
+      <div class="meta mono">
+        <span>feels ${Math.round(cur.apparent_temperature)}°</span>
+        <span>cloud ${cur.cloud_cover}%</span>
+        ${todayPop != null ? `<span>rain ${todayPop}%</span>` : ""}
+        <span>wind ${Math.round(cur.wind_speed_10m)}km/h</span>
+      </div>
+
+      <div class="strip-wrap">
+        <div class="strip">
+          <div class="band" style="background:linear-gradient(90deg,${stops.join(",")})"></div>
+          ${ticks}
+          <div class="now-mark" id="nowMark" style="left:${(nowM/1440*100).toFixed(2)}%"></div>
+        </div>
+        <div class="light-lines mono">
+          <div><span class="gold-dot">golden</span>
+               <span class="k">${hhmm(sunrise)}–${hhmm(goldEndAM)} &nbsp; ${hhmm(goldStPM)}–${hhmm(sunset)}</span></div>
+          <div><span class="blue-dot">blue</span>
+               <span class="k">${hhmm(blueStAM)}–${hhmm(sunrise)} &nbsp; ${hhmm(sunset)}–${hhmm(blueEndPM)}</span></div>
+        </div>
+      </div>
+
+      <hr>
+      <div class="days">${days}</div>
+    `;
+  }
+
+  function tickNow(){
+    const el = document.getElementById("nowMark");
+    if(!el) return;
+    const n = new Date();
+    el.style.left = ((n.getHours()*60 + n.getMinutes())/1440*100).toFixed(2) + "%";
+  }
+
+  function fail(){
+    root.innerHTML = `<div class="state">can't reach the weather service.
+      <button id="retry">retry</button></div>`;
+    document.getElementById("retry").onclick = load;
+  }
+
+  function load(){
+    root.innerHTML = `<div class="state skeleton">loading…</div>`;
+    const url = "https://api.open-meteo.com/v1/forecast"
+      + `?latitude=${LAT}&longitude=${LON}`
+      + "&current=temperature_2m,apparent_temperature,weather_code,cloud_cover,wind_speed_10m"
+      + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+      + "&forecast_days=5&timezone=auto";
+    fetch(url)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(render)
+      .catch(fail);
+  }
+
+  load();
+  setInterval(load, 15 * 60 * 1000);
+  setInterval(tickNow, 60 * 1000);
+})();
+</script>
+</body>
+</html>
