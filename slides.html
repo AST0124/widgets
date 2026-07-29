@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>slides</title>
+<style>
+  :root{
+    --bg: transparent;
+    --ink: #37352f;
+    --muted: #9b9a97;
+    --faint: #c4c2bf;
+    --line: rgba(55,53,47,0.11);
+    --chip: rgba(55,53,47,0.04);
+    --mount: #e7e2df;
+    --mount-line: rgba(55,53,47,0.13);
+    --aperture: #f6f4f2;
+    --accent: #a8737f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink: #e4e0da;
+      --muted: #8d8880;
+      --faint: #5f5b55;
+      --line: rgba(228,224,218,0.13);
+      --chip: rgba(228,224,218,0.05);
+      --mount: #2b2528;
+      --mount-line: rgba(228,224,218,0.13);
+      --aperture: #1f1b1d;
+      --accent: #b98894;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); }
+  body{
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color:var(--ink); font-size:13px; line-height:1.45;
+    padding:14px 14px 12px; -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", Menlo, monospace; font-variant-numeric:tabular-nums; }
+
+  header{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:11px; }
+  .title{ color:var(--muted); font-size:11.5px; letter-spacing:.04em; }
+  .day{ color:var(--accent); font-size:10.5px; letter-spacing:.03em; cursor:pointer; }
+  .day:hover{ opacity:.7; }
+
+  /* slide mount */
+  .mount{
+    background:var(--mount); border-radius:2px;
+    padding:9px 9px 0; margin-bottom:10px;
+  }
+  .aperture{
+    background:var(--aperture); border:1px solid var(--mount-line); border-radius:1px;
+    min-height:96px; display:flex; align-items:center; justify-content:center;
+    padding:14px 13px; text-align:center;
+  }
+  .quote{
+    max-width:100%; word-break:break-word;
+    font-size:14px; line-height:1.55; letter-spacing:.01em;
+    transition:opacity .18s ease;
+  }
+  .quote.long{ font-size:12.5px; line-height:1.6; }
+  .quote.vlong{ font-size:11.5px; line-height:1.6; }
+  .quote.blank{ color:var(--faint); font-size:12px; }
+  .rebate{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:5px 2px 6px; color:var(--faint); font-size:9px; letter-spacing:.08em;
+  }
+
+  /* controls */
+  .bar{ display:flex; align-items:center; gap:4px; margin-bottom:10px; }
+  .bar button{
+    font:inherit; font-size:11.5px; color:var(--muted);
+    background:var(--chip); border:1px solid var(--line); border-radius:3px;
+    padding:3px 9px; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  .bar button:hover{ border-color:var(--muted); color:var(--ink); }
+  .bar .nav{ padding:3px 8px; }
+  .bar .sp{ flex:1 1 auto; }
+  .bar .del{ color:var(--faint); }
+  .bar .del:hover{ color:var(--accent); border-color:var(--accent); }
+
+  /* add */
+  .add{ display:flex; gap:6px; align-items:center; margin-bottom:9px; }
+  .add input{
+    flex:1 1 auto; min-width:0; font:inherit; font-size:12px; color:var(--ink);
+    background:transparent; border:0; border-bottom:1px solid var(--line); padding:3px 1px;
+  }
+  .add input::placeholder{ color:var(--faint); }
+  .add input:focus{ outline:none; border-bottom-color:var(--accent); }
+
+  .foot{ color:var(--faint); font-size:10px; display:flex; justify-content:space-between; gap:8px; }
+  .foot input{
+    font:inherit; font-size:10px; color:var(--muted); background:transparent;
+    border:0; border-bottom:1px solid var(--line); padding:0 1px;
+    font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  }
+  .foot input:hover, .foot input:focus{ border-bottom-color:var(--muted); color:var(--ink); outline:none; }
+  .foot .lbl{ width:74px; }
+  .foot .dt{ width:92px; }
+
+  :focus-visible{ outline:1.5px solid var(--accent); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">⊹ slides</div>
+  <div class="day mono" id="day" title="click to show or hide"></div>
+</header>
+
+<div class="mount">
+  <div class="aperture"><div class="quote blank" id="quote">empty tray. type something below.</div></div>
+  <div class="rebate mono"><span id="rNum"></span><span id="rDate"></span></div>
+</div>
+
+<div class="bar">
+  <button class="nav" id="prev" title="previous (←)">‹</button>
+  <button class="nav" id="next" title="next (→)">›</button>
+  <button id="shuf" title="jump to a random slide">⤫ shuffle</button>
+  <span class="sp"></span>
+  <button class="del" id="del" title="remove this slide">remove</button>
+</div>
+
+<div class="add">
+  <input id="entry" placeholder="a line, a joke, something they said" spellcheck="false">
+</div>
+
+<div class="foot mono">
+  <span><input class="lbl" id="fLabel" placeholder="label" spellcheck="false"> since <input class="dt" id="fDate" type="date"></span>
+  <span id="count"></span>
+</div>
+
+<script>
+(function(){
+  const KEY = "ashtray.slides.v1";
+  const $ = s => document.querySelector(s);
+
+  let memory = null;
+  function read(){
+    if(memory) return memory;
+    try{
+      const raw = localStorage.getItem(KEY);
+      memory = raw ? JSON.parse(raw) : null;
+    }catch(e){ memory = null; }
+    if(!memory) memory = { label:"", start:"", show:true, slides:[] };
+    return memory;
+  }
+  function write(){ try{ localStorage.setItem(KEY, JSON.stringify(memory)); }catch(e){} }
+
+  let idx = 0;
+
+  const fmt = ts => new Date(ts)
+    .toLocaleDateString("en-GB",{ day:"2-digit", month:"short", year:"2-digit" })
+    .toLowerCase().replace(/ /g,"·");
+
+  function add(){
+    const v = $("#entry").value.trim();
+    if(!v) return;
+    read().slides.push({ text:v, ts:Date.now() });
+    write();
+    idx = read().slides.length - 1;
+    $("#entry").value = "";
+    render();
+  }
+
+  function del(){
+    const s = read();
+    if(!s.slides.length) return;
+    s.slides.splice(idx,1);
+    if(idx >= s.slides.length) idx = Math.max(0, s.slides.length-1);
+    write(); render();
+  }
+
+  function move(step){
+    const n = read().slides.length;
+    if(!n) return;
+    idx = (idx + step + n) % n;
+    render();
+  }
+
+  function shuffle(){
+    const n = read().slides.length;
+    if(n < 2) return;
+    let r = idx;
+    while(r === idx) r = Math.floor(Math.random()*n);
+    idx = r; render();
+  }
+
+  function dayCount(){
+    const s = read();
+    if(!s.start) return "";
+    const a = new Date(s.start + "T00:00:00");
+    if(isNaN(a)) return "";
+    const b = new Date(); b.setHours(0,0,0,0);
+    const d = Math.floor((b - a)/864e5) + 1;
+    if(d < 1) return "";
+    return (s.label ? s.label + " " : "") + "day " + d;
+  }
+
+  function render(){
+    const s = read(), t = s.slides, q = $("#quote");
+
+    $("#day").textContent = s.show ? dayCount() : "";
+    $("#fLabel").value = s.label;
+    $("#fDate").value  = s.start;
+    $("#count").textContent = t.length ? t.length + " slides" : "";
+
+    if(!t.length){
+      q.className = "quote blank";
+      q.textContent = "empty tray. type something below.";
+      $("#rNum").textContent = "";
+      $("#rDate").textContent = "";
+      return;
+    }
+
+    const cur = t[idx];
+    const len = cur.text.length;
+    q.className = "quote" + (len > 150 ? " vlong" : len > 70 ? " long" : "");
+    q.style.opacity = 0;
+    setTimeout(() => { q.textContent = cur.text; q.style.opacity = 1; }, 60);
+
+    $("#rNum").textContent  = String(idx+1).padStart(3,"0") + "/" + String(t.length).padStart(3,"0");
+    $("#rDate").textContent = fmt(cur.ts);
+  }
+
+  $("#prev").onclick = () => move(-1);
+  $("#next").onclick = () => move(1);
+  $("#shuf").onclick = shuffle;
+  $("#del").onclick  = del;
+  $("#entry").addEventListener("keydown", e => { if(e.key === "Enter") add(); });
+
+  $("#day").onclick = () => { const s = read(); s.show = !s.show; write(); render(); };
+
+  $("#fLabel").addEventListener("change", e => { read().label = e.target.value.trim(); write(); render(); });
+  $("#fDate").addEventListener("change",  e => { read().start = e.target.value; write(); render(); });
+
+  document.addEventListener("keydown", e => {
+    if(document.activeElement.tagName === "INPUT") return;
+    if(e.key === "ArrowLeft")  move(-1);
+    if(e.key === "ArrowRight") move(1);
+  });
+
+  // open on a random slide so the page greets you differently each time
+  const n = read().slides.length;
+  idx = n ? Math.floor(Math.random()*n) : 0;
+  render();
+})();
+</script>
+</body>
+</html>
