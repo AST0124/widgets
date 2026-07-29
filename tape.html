@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tape</title>
+<style>
+  :root{
+    --bg: transparent;
+    --ink: #37352f;
+    --muted: #9b9a97;
+    --faint: #c4c2bf;
+    --line: rgba(55,53,47,0.11);
+    --chip: rgba(55,53,47,0.04);
+    --shell: #e7e2df;
+    --shell-line: rgba(55,53,47,0.13);
+    --tape: #8a6a72;
+    --accent: #a8737f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink: #e4e0da;
+      --muted: #8d8880;
+      --faint: #5f5b55;
+      --line: rgba(228,224,218,0.13);
+      --chip: rgba(228,224,218,0.05);
+      --shell: #2b2528;
+      --shell-line: rgba(228,224,218,0.13);
+      --tape: #6a4c55;
+      --accent: #b98894;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); }
+  body{
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color:var(--ink); font-size:13px; line-height:1.45;
+    padding:14px 14px 12px; -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  header{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:11px; }
+  .title{ color:var(--muted); font-size:11.5px; letter-spacing:.04em; }
+  .since{ color:var(--faint); font-size:10.5px; letter-spacing:.03em; }
+
+  /* cassette */
+  .tape{
+    background:var(--shell); border-radius:3px;
+    padding:11px 12px 9px; margin-bottom:11px;
+  }
+  .reels{ display:flex; align-items:center; gap:10px; }
+  .reels svg{ flex:0 0 auto; display:block; }
+  .label{
+    flex:1 1 auto; min-width:0; text-align:center;
+    border-top:1px solid var(--shell-line); border-bottom:1px solid var(--shell-line);
+    padding:5px 4px;
+  }
+  .label input{
+    font:inherit; font-size:11.5px; letter-spacing:.06em; color:var(--ink);
+    background:transparent; border:0; text-align:center; width:100%;
+    padding:0;
+  }
+  .label input:focus{ outline:none; }
+  .label .side{ color:var(--faint); font-size:9px; letter-spacing:.14em; margin-top:1px; }
+
+  /* tracklist */
+  .tracks{ max-height:168px; overflow-y:auto; margin-bottom:9px; scrollbar-width:thin; }
+  .tracks::-webkit-scrollbar{ width:3px; }
+  .tracks::-webkit-scrollbar-thumb{ background:var(--line); border-radius:2px; }
+  .tr{
+    display:flex; align-items:baseline; gap:8px;
+    padding:3px 2px; border-radius:2px;
+  }
+  .tr:hover{ background:var(--chip); }
+  .tr .n{ color:var(--faint); font-size:10px; flex:0 0 auto; }
+  .tr .t{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; }
+  .tr a.t{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--accent); }
+  .tr a.t:hover{ color:var(--accent); }
+  .tr .d{ color:var(--faint); font-size:10px; flex:0 0 auto; }
+  .tr .x{
+    flex:0 0 auto; width:13px; text-align:center; cursor:pointer;
+    color:var(--faint); font-size:11px; opacity:0; background:none; border:0; padding:0; font-family:inherit;
+  }
+  .tr:hover .x{ opacity:1; }
+  .tr .x:hover{ color:var(--accent); }
+  .empty{ color:var(--muted); font-size:11.5px; padding:10px 2px; }
+
+  /* input */
+  .add{ display:flex; gap:6px; align-items:center; margin-bottom:9px; }
+  .add input{
+    flex:1 1 auto; min-width:0; font:inherit; font-size:12px; color:var(--ink);
+    background:transparent; border:0; border-bottom:1px solid var(--line);
+    padding:3px 1px;
+  }
+  .add input::placeholder{ color:var(--faint); }
+  .add input:focus{ outline:none; border-bottom-color:var(--accent); }
+  .add button{
+    flex:0 0 auto; font:inherit; font-size:11px; color:var(--muted);
+    background:var(--chip); border:1px solid var(--line); border-radius:3px;
+    padding:3px 9px; cursor:pointer;
+  }
+  .add button:hover{ border-color:var(--muted); color:var(--ink); }
+  :focus-visible{ outline:1.5px solid var(--accent); outline-offset:2px; }
+
+  .foot{ color:var(--faint); font-size:10px; display:flex; justify-content:space-between; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">⊹ 小剧场</div>
+  <div class="since mono" id="since"></div>
+</header>
+
+<div class="tape">
+  <div class="reels">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="14" fill="none" stroke="var(--shell-line)" stroke-width="1"/>
+      <circle id="reelL" cx="17" cy="17" r="12" fill="var(--tape)" opacity=".5"/>
+      <circle cx="17" cy="17" r="4" fill="var(--shell)" stroke="var(--shell-line)" stroke-width="1"/>
+    </svg>
+    <div class="label">
+      <input id="name" maxlength="28" spellcheck="false">
+      <div class="side mono">side a</div>
+    </div>
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="14" fill="none" stroke="var(--shell-line)" stroke-width="1"/>
+      <circle id="reelR" cx="17" cy="17" r="4.5" fill="var(--tape)" opacity=".5"/>
+      <circle cx="17" cy="17" r="4" fill="var(--shell)" stroke="var(--shell-line)" stroke-width="1"/>
+    </svg>
+  </div>
+</div>
+
+<div class="tracks" id="tracks"></div>
+
+<div class="add">
+  <input id="entry" placeholder="scene title, paste a link if you have one" spellcheck="false">
+  <button id="rec">rec</button>
+</div>
+
+<div class="foot mono">
+  <span id="count">0 tracks</span>
+  <span id="hint"></span>
+</div>
+
+<script>
+(function(){
+  const KEY = "ashtray.tape.v1";
+  const CAP = 24;                     // reel is "full" at this many tracks
+  const $ = s => document.querySelector(s);
+
+  let memory = null;
+  function read(){
+    if(memory) return memory;
+    try{
+      const raw = localStorage.getItem(KEY);
+      memory = raw ? JSON.parse(raw) : null;
+    }catch(e){ memory = null; }
+    if(!memory) memory = { name:"casey", tracks:[] };
+    return memory;
+  }
+  function write(){ try{ localStorage.setItem(KEY, JSON.stringify(memory)); }catch(e){} }
+
+  const fmt = ts => new Date(ts)
+    .toLocaleDateString("en-GB",{ day:"2-digit", month:"short" }).toLowerCase();
+
+  function add(){
+    const raw = $("#entry").value.trim();
+    if(!raw) return;
+    const m = raw.match(/https?:\/\/\S+/);
+    const url = m ? m[0] : null;
+    const title = raw.replace(/https?:\/\/\S+/, "").trim() || "untitled";
+    read().tracks.push({ title, url, ts: Date.now() });
+    write();
+    $("#entry").value = "";
+    render(true);
+  }
+
+  function remove(i){
+    read().tracks.splice(i,1);
+    write(); render();
+  }
+
+  function render(scroll){
+    const s = read(), t = s.tracks;
+
+    $("#name").value = s.name;
+
+    // reels: left unwinds, right winds on
+    const f = Math.min(1, t.length / CAP);
+    $("#reelL").setAttribute("r", (12 - 7.5*f).toFixed(2));
+    $("#reelR").setAttribute("r", (4.5 + 7.5*f).toFixed(2));
+
+    $("#since").textContent = t.length ? "since " + fmt(t[0].ts) : "";
+    $("#count").textContent = t.length + (t.length === 1 ? " track" : " tracks");
+    $("#hint").textContent = t.length ? "" : "enter to log";
+
+    const box = $("#tracks");
+    if(!t.length){
+      box.innerHTML = `<div class="empty">blank tape. log a scene below.</div>`;
+      return;
+    }
+    box.innerHTML = t.map((x,i) => {
+      const n = String(i+1).padStart(2,"0");
+      const label = x.url
+        ? `<a class="t" href="${x.url}" target="_blank" rel="noopener">${esc(x.title)}</a>`
+        : `<span class="t">${esc(x.title)}</span>`;
+      return `<div class="tr">
+        <span class="n mono">${n}</span>
+        ${label}
+        <span class="d mono">${fmt(x.ts)}</span>
+        <button class="x" data-i="${i}" title="remove track">×</button>
+      </div>`;
+    }).join("");
+    box.querySelectorAll(".x").forEach(b => b.onclick = () => remove(+b.dataset.i));
+    if(scroll) box.scrollTop = box.scrollHeight;
+  }
+
+  function esc(s){
+    return s.replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  }
+
+  $("#rec").onclick = add;
+  $("#entry").addEventListener("keydown", e => { if(e.key === "Enter") add(); });
+  $("#name").addEventListener("change", e => {
+    read().name = e.target.value.trim() || "untitled";
+    write(); render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
