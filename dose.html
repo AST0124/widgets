@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dose</title>
+<style>
+  :root{
+    --bg: transparent;
+    --ink: #37352f;
+    --muted: #9b9a97;
+    --faint: #c4c2bf;
+    --line: rgba(55,53,47,0.11);
+    --chip: rgba(55,53,47,0.04);
+    --ok: #7e9770;
+    --gold: #d9a441;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink: #e4e0da;
+      --muted: #8d8880;
+      --faint: #5f5b55;
+      --line: rgba(228,224,218,0.13);
+      --chip: rgba(228,224,218,0.05);
+      --ok: #8aa47c;
+      --gold: #c99435;
+    }
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background: var(--bg); }
+  body{
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); font-size:13px; line-height:1.45;
+    padding:14px 14px 12px; -webkit-font-smoothing: antialiased;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  header{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:11px; }
+  .title{ color: var(--muted); font-size:11.5px; letter-spacing:.04em; }
+  .date{ color: var(--faint); font-size:10.5px; letter-spacing:.03em; }
+
+  .totals{ display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+  .big{ font-size:26px; line-height:.95; letter-spacing:-.01em; }
+  .big small{ font-size:11px; color: var(--muted); margin-left:3px; }
+  .sub{ color: var(--muted); font-size:11px; }
+
+  .bar{ height:3px; border-radius:2px; background: var(--chip); overflow:hidden; margin-bottom:13px; }
+  .bar i{ display:block; height:100%; background: var(--ok); transition: width .35s ease; }
+
+  /* list */
+  .list{ margin-bottom:4px; }
+  .row{
+    display:flex; align-items:center; gap:9px;
+    padding:5px 2px; border-radius:3px;
+  }
+  button.row{
+    width:100%; font:inherit; color:var(--ink); text-align:left;
+    background:none; border:0; cursor:pointer;
+  }
+  button.row:hover{ background: var(--chip); }
+  .box{
+    width:15px; height:15px; flex:none; border-radius:3px;
+    border:1.5px solid var(--faint);
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:transparent; transition: all .15s ease;
+  }
+  .row.on .box{ background: var(--ok); border-color: var(--ok); color:#fff; }
+  .name{ font-size:13px; }
+  .row.on .name{ color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
+  .slot{ margin-left:auto; font-size:9.5px; color: var(--faint); letter-spacing:.05em; }
+  .empty{ color: var(--muted); font-size:11.5px; padding:6px 2px 8px; }
+
+  .donemsg{ color: var(--muted); font-size:11px; min-height:16px; margin:2px 0 8px; }
+  .donemsg .g{ color: var(--gold); }
+
+  hr{ border:0; border-top:1px solid var(--line); margin:9px 0; }
+
+  /* week */
+  .week{ display:flex; gap:3px; margin-bottom:3px; }
+  .wcol{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .wdot{
+    width:8px; height:8px; border-radius:50%;
+    border:1px solid var(--faint); background:transparent;
+  }
+  .wdot.half{ background: var(--faint); border-color: var(--faint); }
+  .wdot.full{ background: var(--ok); border-color: var(--ok); }
+  .wdot.today{ outline:1px solid var(--gold); outline-offset:1.5px; }
+  .wdow{ font-size:9px; color: var(--faint); }
+
+  /* edit mode */
+  .foot{ display:flex; justify-content:flex-end; margin-top:8px; }
+  .foot button, .edit-row button{
+    font:inherit; font-size:11px; color: var(--muted);
+    background: var(--chip); border:1px solid var(--line);
+    border-radius:3px; padding:2px 8px; cursor:pointer;
+  }
+  .foot button:hover, .edit-row button:hover{ border-color: var(--muted); color: var(--ink); }
+  .del{
+    margin-left:auto; flex:none; font-size:12px; color: var(--faint);
+    background:none; border:0; cursor:pointer; padding:0 4px;
+  }
+  .del:hover{ color: var(--ink); }
+  .edit-row{ display:flex; gap:6px; align-items:center; padding:6px 2px 2px; }
+  .edit-row input{
+    font:inherit; font-size:12px; color: var(--ink);
+    background:transparent; border:0; border-bottom:1px solid var(--line);
+    padding:2px 1px;
+  }
+  .edit-row input:focus{ border-bottom-color: var(--muted); outline:none; }
+  #inName{ flex:1 1 auto; min-width:0; }
+  #inSlot{ width:44px; text-align:center; }
+  :focus-visible{ outline:1.5px solid var(--gold); outline-offset:2px; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">⊹ daily dose</div>
+  <div class="date mono" id="date"></div>
+</header>
+
+<div class="totals">
+  <div class="big mono"><span id="count">0/0</span><small>taken</small></div>
+  <div class="sub" id="sub"></div>
+</div>
+<div class="bar"><i id="bar" style="width:0%"></i></div>
+
+<div class="list" id="list"></div>
+<div class="donemsg" id="donemsg"></div>
+
+<hr>
+<div class="week" id="week"></div>
+
+<div class="foot"><button id="editBtn">edit</button></div>
+
+<script>
+(function(){
+  const KEY = "ashtray.dose.v1";
+  const $ = s => document.querySelector(s);
+  let editing = false;
+
+  /* ── storage (memory fallback if blocked) ── */
+  let memory = null;
+  function read(){
+    if(memory) return memory;
+    try{
+      const raw = localStorage.getItem(KEY);
+      memory = raw ? JSON.parse(raw) : null;
+    }catch(e){ memory = null; }
+    if(!memory) memory = { items:[], days:{} };
+    return memory;
+  }
+  function write(){ try{ localStorage.setItem(KEY, JSON.stringify(memory)); }catch(e){} }
+
+  const dayKey = d => {
+    d = d || new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  };
+  function todayChecks(){
+    const s = read(), k = dayKey();
+    if(!s.days[k]) s.days[k] = {};
+    return s.days[k];
+  }
+  function prune(){
+    const s = read(), cutoff = Date.now() - 40*864e5;
+    Object.keys(s.days).forEach(k => {
+      if(new Date(k + "T12:00:00").getTime() < cutoff) delete s.days[k];
+    });
+  }
+
+  const DONE = [
+    "all taken · future you says thanks",
+    "full marks today",
+    "done · go be free",
+  ];
+
+  function render(){
+    const s = read(), checks = todayChecks();
+    const total = s.items.length;
+    const done = s.items.filter(it => checks[it.id]).length;
+
+    $("#date").textContent = new Date().toLocaleDateString("en-GB",{ day:"2-digit", month:"short" }).toLowerCase();
+    $("#count").textContent = done + "/" + total;
+    $("#bar").style.width = total ? (done/total*100) + "%" : "0%";
+    $("#sub").textContent = editing ? "editing — changes save automatically" : "";
+    $("#donemsg").innerHTML = (total && done === total && !editing)
+      ? '<span class="g">◆</span> ' + DONE[new Date().getDate() % DONE.length] : "";
+
+    const list = $("#list");
+    list.innerHTML = "";
+
+    if(!total && !editing){
+      list.innerHTML = '<div class="empty">nothing here yet — press edit to add your list.</div>';
+    }
+
+    s.items.forEach(it => {
+      if(editing){
+        const div = document.createElement("div");
+        div.className = "row";
+        div.innerHTML = '<span class="box"></span><span class="name">' + esc(it.name) + '</span>' +
+          (it.slot ? '<span class="slot mono">' + esc(it.slot) + '</span>' : '');
+        const del = document.createElement("button");
+        del.className = "del"; del.textContent = "×"; del.title = "remove";
+        del.onclick = () => {
+          s.items = s.items.filter(x => x.id !== it.id);
+          write(); render();
+        };
+        div.appendChild(del);
+        list.appendChild(div);
+      } else {
+        const b = document.createElement("button");
+        b.className = "row" + (checks[it.id] ? " on" : "");
+        b.innerHTML = '<span class="box">✓</span><span class="name">' + esc(it.name) + '</span>' +
+          (it.slot ? '<span class="slot mono">' + esc(it.slot) + '</span>' : '');
+        b.onclick = () => { checks[it.id] = !checks[it.id]; write(); render(); };
+        list.appendChild(b);
+      }
+    });
+
+    if(editing){
+      const row = document.createElement("div");
+      row.className = "edit-row";
+      row.innerHTML = '<input id="inName" placeholder="add something…" maxlength="40">' +
+        '<input id="inSlot" placeholder="am/pm" maxlength="8">' +
+        '<button id="addBtn">add</button>';
+      list.appendChild(row);
+      const commit = () => {
+        const name = $("#inName").value.trim();
+        if(!name) return;
+        s.items.push({ id: Date.now().toString(36), name, slot: $("#inSlot").value.trim() });
+        write(); render();
+        $("#inName") && $("#inName").focus();
+      };
+      $("#addBtn").onclick = commit;
+      $("#inName").addEventListener("keydown", e => { if(e.key === "Enter") commit(); });
+      $("#inSlot").addEventListener("keydown", e => { if(e.key === "Enter") commit(); });
+    }
+
+    // week strip
+    const wk = [];
+    for(let i=6; i>=0; i--){
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const ch = s.days[dayKey(d)] || {};
+      const n = s.items.filter(it => ch[it.id]).length;
+      const cls = (n >= s.items.length && s.items.length ? "full" : n > 0 ? "half" : "");
+      wk.push('<div class="wcol"><span class="wdot ' + cls + (i===0 ? ' today' : '') + '"></span>' +
+        '<span class="wdow">' + d.toLocaleDateString("en-GB",{weekday:"narrow"}).toLowerCase() + '</span></div>');
+    }
+    $("#week").innerHTML = wk.join("");
+
+    $("#editBtn").textContent = editing ? "done" : "edit";
+  }
+
+  function esc(t){ return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  $("#editBtn").onclick = () => { editing = !editing; render(); };
+
+  prune(); write(); render();
+
+  setInterval(() => {
+    if($("#date").dataset.k !== dayKey()){ $("#date").dataset.k = dayKey(); render(); }
+  }, 60000);
+})();
+</script>
+</body>
+</html>
