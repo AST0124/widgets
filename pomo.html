@@ -1,186 +1,520 @@
-<!doctype html>
-<html lang="zh">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>focus ticket ⊹</title>
+<title>pomo</title>
 <style>
   :root{
-    --paper:#f6f2ea; --ink:#3a3733; --faded:#8d8778;
-    --accent:#b5543b; --line:#c9c2b2; --break:#6f8a6b;
+    --bg: transparent;
+    --ink: #37352f;
+    --muted: #9b9a97;
+    --faint: #c4c2bf;
+    --line: rgba(55,53,47,0.11);
+    --chip: rgba(55,53,47,0.04);
   }
-  *{box-sizing:border-box; margin:0}
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink: #e4e0da;
+      --muted: #8d8880;
+      --faint: #5f5b55;
+      --line: rgba(228,224,218,0.13);
+      --chip: rgba(228,224,218,0.05);
+    }
+  }
+
+  /* ── palettes ──────────────────────────────────
+     --focus / --rest   : blocks, bars, dots
+     --focus-ink / --rest-ink : the big numbers
+     --g-focus / --g-rest     : progress bar, revealed left→right
+     --goal             : a day that hit the goal            */
+
+  /* dusk: focus is blue hour, break is golden hour */
+  :root, :root[data-pal="dusk"]{
+    --focus:#7a94b8; --focus-ink:#6a85ad;
+    --rest:#d9a441;  --rest-ink:#c48f2c;
+    --g-focus: linear-gradient(90deg,#8da3c2,#7a94b8 45%,#b7a3c3 80%,#dfa5ae);
+    --g-rest:  linear-gradient(90deg,#dfa5ae,#e3a878 45%,#d9a441);
+    --goal:#d9a441;
+  }
+  /* sorbet: light blue, pink, lemon */
+  :root[data-pal="sorbet"]{
+    --focus:#8db4db; --focus-ink:#6f9dcb;
+    --rest:#e9a0b4;  --rest-ink:#d8819a;
+    --g-focus: linear-gradient(90deg,#b5d0ea,#8db4db 60%,#c4b3dc);
+    --g-rest:  linear-gradient(90deg,#f0b8c6,#e9a0b4 60%,#e8d06a);
+    --goal:#e2c94f;
+  }
+  /* clay: the first version */
+  :root[data-pal="clay"]{
+    --focus:#b0664f; --focus-ink:#b0664f;
+    --rest:#7f9477;  --rest-ink:#7f9477;
+    --g-focus: linear-gradient(90deg,#b0664f,#b0664f);
+    --g-rest:  linear-gradient(90deg,#7f9477,#7f9477);
+    --goal:#b0664f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root, :root[data-pal="dusk"]{
+      --focus:#6f8cb4; --focus-ink:#8ea8cc;
+      --rest:#c99435;  --rest-ink:#d9a748;
+      --g-focus: linear-gradient(90deg,#4b6b98,#6f8cb4 45%,#9d88ad 80%,#c48d97);
+      --g-rest:  linear-gradient(90deg,#c48d97,#cf9463 45%,#c99435);
+      --goal:#c99435;
+    }
+    :root[data-pal="sorbet"]{
+      --focus:#85acd4; --focus-ink:#9cc0e4;
+      --rest:#df95aa;  --rest-ink:#eaa6ba;
+      --g-focus: linear-gradient(90deg,#6c93bd,#85acd4 60%,#aa98c8);
+      --g-rest:  linear-gradient(90deg,#d9899f,#df95aa 60%,#d8c35c);
+      --goal:#d8c35c;
+    }
+    :root[data-pal="clay"]{
+      --focus:#c98068; --focus-ink:#c98068;
+      --rest:#8fa587;  --rest-ink:#8fa587;
+      --g-focus: linear-gradient(90deg,#c98068,#c98068);
+      --g-rest:  linear-gradient(90deg,#8fa587,#8fa587);
+      --goal:#c98068;
+    }
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background: var(--bg); }
   body{
-    background:var(--paper); color:var(--ink);
-    font-family:"Courier New","Courier Prime",monospace;
-    display:flex; align-items:center; justify-content:center;
-    min-height:100vh; padding:14px;
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); font-size:13px; line-height:1.45;
+    padding:14px 14px 12px; -webkit-font-smoothing: antialiased;
   }
-  .ticket{
-    width:min(560px,100%);
-    border:1.5px dashed var(--line); border-radius:6px;
-    padding:16px 20px 14px; background:var(--paper); position:relative;
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  header{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .title{ color: var(--muted); font-size:11.5px; letter-spacing:.04em; }
+  .date{ color: var(--faint); font-size:10.5px; letter-spacing:.03em; }
+
+  /* now */
+  .now{ display:flex; align-items:flex-end; gap:10px; margin-bottom:3px; }
+  .time{ font-size:34px; line-height:.9; letter-spacing:-.02em; transition: color .3s ease; }
+  .time.run.focus{ color: var(--focus-ink); }
+  .time.run.break{ color: var(--rest-ink); }
+  .phase{ padding-bottom:3px; }
+  .phase .glyph{ margin-right:5px; font-size:9px; vertical-align:1px; }
+  .phase .glyph.focus{ color: var(--focus); }
+  .phase .glyph.break{ color: var(--rest); }
+  .phase .sub{ color: var(--muted); }
+  .meta{ color: var(--muted); font-size:11px; margin-bottom:10px; }
+  .meta span + span::before{ content:"·"; margin:0 6px; color: var(--faint); }
+
+  .bar{ height:3px; border-radius:2px; background: var(--chip); overflow:hidden; margin-bottom:4px; }
+  .bar i{
+    display:block; height:100%; width:100%; background: var(--g-focus);
+    clip-path: inset(0 100% 0 0); transition: clip-path .3s linear;
   }
-  .ticket::before,.ticket::after{
-    content:""; position:absolute; top:50%; width:16px; height:16px;
-    background:var(--paper); border:1.5px dashed var(--line);
-    border-radius:50%; transform:translateY(-50%);
+  .bar.break i{ background: var(--g-rest); }
+  .barlabel{ display:flex; justify-content:space-between; color: var(--faint); font-size:9.5px; margin-bottom:11px; }
+
+  /* buttons */
+  .keys{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-bottom:8px; }
+  .keys button{
+    font: inherit; font-size:11.5px; color: var(--ink);
+    background: var(--chip); border:1px solid var(--line);
+    border-radius:3px; padding:4px 9px; cursor:pointer; transition: border-color .15s;
   }
-  .ticket::before{left:-9px; clip-path:inset(0 0 0 50%)}
-  .ticket::after{right:-9px; clip-path:inset(0 50% 0 0)}
-  .row{display:flex; justify-content:space-between; align-items:baseline}
-  .eyebrow{font-size:11px; letter-spacing:.18em; color:var(--faded)}
-  .kao{font-size:14px; color:var(--faded)}
-  .time{
-    text-align:center; font-size:clamp(44px,14vw,64px);
-    font-variant-numeric:tabular-nums; letter-spacing:.04em;
-    margin:10px 0 2px; color:var(--ink);
+  .keys button:hover{ border-color: var(--muted); }
+  .keys button:active{ transform: translateY(.5px); }
+  .keys #go{ min-width:58px; }
+  .modes{ margin-left:auto; display:flex; gap:2px; }
+  .modes button{
+    background: transparent; border-color: transparent; color: var(--faint);
+    padding:4px 5px; font-size:10.5px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
   }
-  .time.focus{color:var(--accent)}
-  .time.break{color:var(--break)}
-  .msg{
-    text-align:center; font-size:12px; color:var(--faded);
-    letter-spacing:.08em; min-height:1.6em; margin-bottom:12px;
+  .modes button:hover{ color: var(--muted); border-color: transparent; }
+  .modes button.on{ color: var(--ink); }
+  :focus-visible{ outline:1.5px solid var(--focus); outline-offset:2px; }
+
+  .msg{ color: var(--muted); font-size:11px; min-height:16px; margin-bottom:12px; }
+
+  hr{ border:0; border-top:1px solid var(--line); margin:0 0 11px; }
+
+  /* today strip */
+  .strip{ position:relative; height:9px; border-radius:1px; background: var(--chip); }
+  .strip .blk{
+    position:absolute; top:0; bottom:0; min-width:2px; border-radius:1px;
+    background: var(--focus); opacity:.8;
   }
-  .controls{display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap}
-  button{
-    all:unset; cursor:pointer; font-family:inherit;
-    font-size:12px; letter-spacing:.14em;
-    border:1.5px dashed var(--line); border-radius:5px;
-    padding:6px 14px; color:var(--ink);
+  .strip .blk.live{ opacity:.35; }
+  .strip .now-mark{
+    position:absolute; top:-4px; bottom:-4px; width:1.5px; background: var(--ink);
   }
-  button:hover{border-color:var(--accent); color:var(--accent)}
-  button:focus-visible{outline:1.5px dashed var(--accent); outline-offset:2px}
-  button.primary{border-style:solid; border-color:var(--accent); color:var(--accent)}
-  .foot{
-    border-top:1px dotted var(--line); padding-top:9px;
-    display:flex; justify-content:space-between; align-items:center;
-    font-size:11px; letter-spacing:.14em; color:var(--faded);
+  .strip .now-mark::after{
+    content:""; position:absolute; left:50%; bottom:-4px; transform: translateX(-50%);
+    border-left:2.5px solid transparent; border-right:2.5px solid transparent;
+    border-bottom:3px solid var(--ink);
   }
-  .modes button{border:none; padding:2px 6px; font-size:11px; color:var(--faded)}
-  .modes button.on{color:var(--accent); text-decoration:underline dotted}
+  .hours{ display:flex; justify-content:space-between; color: var(--faint); font-size:9px; margin:6px 0 11px; }
+
+  /* week */
+  .week{ display:flex; gap:3px; align-items:flex-end; height:24px; margin-bottom:5px; }
+  .wbar{ flex:1 1 0; background: var(--chip); border-radius:1px; height:22px; position:relative; }
+  .wbar i{ position:absolute; left:0; right:0; bottom:0; background: var(--focus); opacity:.6; border-radius:1px; }
+  .wbar.today i{ opacity:.85; }
+  .wbar.hit i{ background: var(--goal); opacity:.75; }
+  .wbar.hit.today i{ opacity:.95; }
+  .wdow{ display:flex; gap:3px; color: var(--faint); font-size:9px; margin-bottom:10px; }
+  .wdow span{ flex:1 1 0; text-align:center; }
+
+  /* settings */
+  .set{ color: var(--faint); font-size:10px; display:flex; flex-wrap:wrap; gap:4px 10px; }
+  .set input{
+    font: inherit; font-size:10px; color: var(--muted);
+    background: transparent; border:0; border-bottom:1px solid var(--line);
+    width:24px; text-align:right; padding:0 1px;
+    font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  }
+  .set input:hover, .set input:focus{ border-bottom-color: var(--muted); color: var(--ink); }
+  .set input::-webkit-outer-spin-button,
+  .set input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .set input[type=number]{ -moz-appearance: textfield; }
+  .pal{ display:inline-flex; align-items:center; gap:5px; }
+  .pal button{
+    width:11px; height:11px; padding:0; border-radius:50%; cursor:pointer;
+    border:1px solid transparent; outline-offset:2px;
+    box-shadow: 0 0 0 1.5px transparent; transition: box-shadow .15s;
+  }
+  .pal button:hover{ box-shadow: 0 0 0 1.5px var(--line); }
+  .pal button.on{ box-shadow: 0 0 0 1.5px var(--muted); }
+  .pal [data-pal="dusk"]  { background: linear-gradient(135deg,#7a94b8 45%,#d9a441 55%); }
+  .pal [data-pal="sorbet"]{ background: linear-gradient(135deg,#8db4db 33%,#e9a0b4 33% 66%,#e8d06a 66%); }
+  .pal [data-pal="clay"]  { background: linear-gradient(135deg,#b0664f 45%,#7f9477 55%); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
 </style>
 </head>
 <body>
-<div class="ticket">
-  <div class="row">
-    <span class="eyebrow">⊹ focus ticket</span>
-    <span class="kao" id="kao">( ᐢ. ̫ .ᐢ )</span>
-  </div>
-  <div class="time" id="time">25:00</div>
-  <div class="msg" id="msg">准备好了就按 start ⊹</div>
-  <div class="controls">
-    <button class="primary" id="startBtn">start</button>
-    <button id="resetBtn">reset</button>
-    <button id="skipBtn">skip →</button>
-  </div>
-  <div class="foot">
-    <span class="modes">
-      <button data-f="25" data-b="5" class="on">25/5</button>
-      <button data-f="50" data-b="10">50/10</button>
-    </span>
-    <span id="tally">today ·</span>
-  </div>
+
+<header>
+  <div class="title">◷ focus</div>
+  <div class="date mono" id="date"></div>
+</header>
+
+<div class="now">
+  <div class="time mono" id="time" role="timer">25:00</div>
+  <div class="phase"><span class="glyph" id="glyph">●</span><span id="phase">focus</span></div>
+</div>
+<div class="meta mono" id="meta"></div>
+
+<div class="bar" id="bar"><i id="fill"></i></div>
+<div class="barlabel mono"><span id="bl"></span><span id="br"></span></div>
+
+<div class="keys">
+  <button id="go">start</button>
+  <button id="reset">reset</button>
+  <button id="skip">skip →</button>
+  <span class="modes">
+    <button data-f="25" data-b="5">25/5</button>
+    <button data-f="50" data-b="10">50/10</button>
+  </span>
+</div>
+<div class="msg" id="msg" aria-live="polite"></div>
+
+<hr>
+<div class="strip" id="strip"></div>
+<div class="hours mono"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+
+<div class="week" id="week"></div>
+<div class="wdow" id="wdow"></div>
+
+<div class="set">
+  <span>focus <input type="number" id="sFocus" min="1" max="180">min</span>
+  <span>break <input type="number" id="sBreak" min="1" max="60">min</span>
+  <span>goal <input type="number" id="sGoal" min="0" max="24">/day</span>
+  <span class="pal">
+    <button data-pal="dusk"   title="dusk · blue hour → golden hour" aria-label="dusk palette"></button>
+    <button data-pal="sorbet" title="sorbet · blue, pink, lemon" aria-label="sorbet palette"></button>
+    <button data-pal="clay"   title="clay · the first version" aria-label="clay palette"></button>
+  </span>
 </div>
 
 <script>
-/* ── 完成一个 focus 后随机抽一句 ── */
-const DONE_LINES = [
-  "一格胶卷曝光完毕 ⊹ 起来喝口水",
-  "宜伸懒腰，忌立刻刷手机。",
-  "you're doing better than you think ♡",
-  "走的人多了，也便成了路。这是一步。",
-  "done > perfect. 休息是流程的一部分。",
-];
-const $ = id => document.getElementById(id);
-let FOCUS = 25*60, BREAK = 5*60;
-let mode = "focus", endAt = null, left = FOCUS, timer = null, done = 0;
+(function(){
+  const KEY = "ashtray.pomo.v1";
+  const $ = s => document.querySelector(s);
 
-const KAO = {idle:"( ᐢ. ̫ .ᐢ )", focus:"(ง •̀_•́)ง", brk:"( ˶ᵔ ᵕ ᵔ˶ ) 🍵", win:"ᕙ(˶ˆ꒳ˆ˵)ᕗ"};
+  /* 完成一个 focus 后随机抽一句 */
+  const DONE_LINES = [
+    "一格胶卷曝光完毕 ⊹ 起来喝口水",
+    "宜伸懒腰，忌立刻刷手机。",
+    "you're doing better than you think ♡",
+    "走的人多了，也便成了路。这是一步。",
+    "done > perfect. 休息是流程的一部分。",
+  ];
 
-function fmt(s){ s=Math.max(0,Math.ceil(s)); return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+  /* ── storage (falls back to memory if blocked) ── */
+  let memory = null;
+  function read(){
+    if(memory) return memory;
+    try{
+      const raw = localStorage.getItem(KEY);
+      memory = raw ? JSON.parse(raw) : null;
+    }catch(e){ memory = null; }
+    if(!memory) memory = { focus:25, brk:5, goal:6, pal:"dusk", days:{}, run:null };
+    return memory;
+  }
+  function write(){
+    try{ localStorage.setItem(KEY, JSON.stringify(memory)); }catch(e){}
+  }
 
-function paint(){
-  $("time").textContent = fmt(left);
-  $("time").className = "time " + (timer ? (mode==="focus"?"focus":"break") : "");
-  $("tally").textContent = "today · " + (done ? "⊹".repeat(Math.min(done,12)) + (done>12?" +"+(done-12):"") : "–");
-}
+  const dayKey = d => {
+    d = d || new Date();
+    return d.getFullYear() + "-" +
+      String(d.getMonth()+1).padStart(2,"0") + "-" +
+      String(d.getDate()).padStart(2,"0");
+  };
+  function sessions(k){
+    const s = read();
+    if(!s.days[k]) s.days[k] = [];
+    return s.days[k];
+  }
+  function prune(){
+    const s = read(), cutoff = Date.now() - 40*864e5;
+    Object.keys(s.days).forEach(k => {
+      if(new Date(k + "T12:00:00").getTime() < cutoff) delete s.days[k];
+    });
+  }
 
-function beep(){
-  try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = 660; g.gain.value = 0.06;
-    o.start(); o.stop(ctx.currentTime + 0.18);
-  }catch(e){}
-}
+  /* ── timer state (survives Notion reloading the embed) ── */
+  const planFor = mode => mode === "focus" ? read().focus : read().brk;
+  function run(){
+    const s = read();
+    if(!s.run) s.run = { mode:"focus", plan:s.focus, left:s.focus*60, endAt:null, began:null };
+    return s.run;
+  }
+  const running = () => !!run().endAt;
+  const remaining = () => { const r = run(); return r.endAt ? (r.endAt - Date.now())/1000 : r.left; };
+  const untouched = () => { const r = run(); return !r.endAt && !r.began; };
 
-function tick(){
-  left = (endAt - Date.now())/1000;
-  if(left <= 0){
-    clearInterval(timer); timer = null; beep();
-    if(mode === "focus"){
-      done++; mode = "break"; left = BREAK;
-      $("kao").textContent = KAO.win;
-      $("msg").textContent = DONE_LINES[Math.floor(Math.random()*DONE_LINES.length)];
-    } else {
-      mode = "focus"; left = FOCUS;
-      $("kao").textContent = KAO.idle;
-      $("msg").textContent = "休息完毕，下一格随时开 ⊹";
+  function setPhase(mode){
+    const r = run();
+    r.mode = mode; r.plan = planFor(mode); r.left = r.plan*60;
+    r.endAt = null; r.began = null;
+  }
+
+  let msg = "ready when you are";
+  let loop = null;
+
+  /* ── sound ── */
+  let audio = null;
+  function wakeAudio(){
+    try{
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if(audio.state === "suspended") audio.resume();
+    }catch(e){}
+  }
+  function chime(){
+    if(!audio) return;
+    try{
+      const t = audio.currentTime;
+      [[660,0],[880,.16]].forEach(([f,d]) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t+d);
+        g.gain.linearRampToValueAtTime(.07, t+d+.02);
+        g.gain.exponentialRampToValueAtTime(.0001, t+d+.5);
+        o.connect(g); g.connect(audio.destination);
+        o.start(t+d); o.stop(t+d+.55);
+      });
+    }catch(e){}
+  }
+
+  /* ── actions ── */
+  function start(){
+    wakeAudio();
+    const r = run();
+    r.endAt = Date.now() + r.left*1000;
+    if(!r.began) r.began = Date.now();
+    msg = r.mode === "focus" ? "专注中 · 别开新 tab 哦" : "break · 离屏幕远一点";
+    write(); spin(); renderAll();
+  }
+  function pause(){
+    const r = run();
+    r.left = Math.max(0, remaining()); r.endAt = null;
+    msg = "暂停中，世界可以等一下";
+    write(); halt(); renderAll();
+  }
+  function reset(){
+    setPhase(run().mode);
+    msg = "重置好了";
+    write(); halt(); renderAll();
+  }
+  function skip(){
+    setPhase(run().mode === "focus" ? "break" : "focus");
+    msg = run().mode === "focus" ? "focus 格就位" : "直接进休息，也行 lol";
+    write(); halt(); renderAll();
+  }
+  function complete(away){
+    const r = run();
+    const end = r.endAt || Date.now();
+    if(r.mode === "focus"){
+      sessions(dayKey(new Date(end))).push({
+        s: r.began || end - r.plan*60000, e: end, m: r.plan
+      });
+      setPhase("break");
+      msg = away ? "上一格在你离开时曝光完毕 ⊹"
+                 : DONE_LINES[Math.floor(Math.random()*DONE_LINES.length)];
+    }else{
+      setPhase("focus");
+      msg = "休息完毕，下一格随时开 ⊹";
     }
-    $("startBtn").textContent = "start";
-    paint(); return;
+    write(); halt();
+    if(!away) chime();
+    renderAll();
   }
-  paint();
-}
 
-$("startBtn").addEventListener("click", () => {
-  if(timer){ // pause
-    clearInterval(timer); timer = null; left = (endAt - Date.now())/1000;
-    $("startBtn").textContent = "resume"; $("kao").textContent = KAO.idle;
-    $("msg").textContent = "暂停中 — 世界可以等一下";
-  } else {
-    endAt = Date.now() + left*1000;
-    timer = setInterval(tick, 250);
-    $("startBtn").textContent = "pause";
-    $("kao").textContent = mode==="focus" ? KAO.focus : KAO.brk;
-    $("msg").textContent = mode==="focus" ? "专注中 · 别开新 tab 哦" : "break · 离屏幕远一点";
+  function spin(){
+    halt();
+    loop = setInterval(() => {
+      if(remaining() <= 0) complete(false);
+      else paint();
+    }, 250);
   }
-  paint();
-});
+  function halt(){ if(loop){ clearInterval(loop); loop = null; } }
 
-$("resetBtn").addEventListener("click", () => {
-  clearInterval(timer); timer = null;
-  left = mode==="focus" ? FOCUS : BREAK;
-  $("startBtn").textContent = "start"; $("kao").textContent = KAO.idle;
-  $("msg").textContent = "重置好了 ⊹";
-  paint();
-});
+  /* ── render ── */
+  const fmt = s => {
+    s = Math.max(0, Math.ceil(s));
+    return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0");
+  };
+  const clock = ts => new Date(ts).toLocaleTimeString("en-GB",{ hour:"2-digit", minute:"2-digit" });
+  const dur = m => m < 60 ? m + "m" : Math.floor(m/60) + "h" + (m%60 ? " " + (m%60) + "m" : "");
 
-$("skipBtn").addEventListener("click", () => {
-  clearInterval(timer); timer = null;
-  mode = mode==="focus" ? "break" : "focus";
-  left = mode==="focus" ? FOCUS : BREAK;
-  $("startBtn").textContent = "start";
-  $("kao").textContent = KAO.idle;
-  $("msg").textContent = mode==="focus" ? "focus 格就位" : "直接进休息,也行 lol";
-  paint();
-});
+  // the fast part: runs every tick
+  function paint(){
+    const r = run(), left = remaining(), on = running();
+    $("#time").textContent = fmt(left);
+    $("#time").className = "time mono" + (on ? " run " + r.mode : "");
+    const done = Math.min(100, Math.max(0, 100 - Math.max(0, left) / (r.plan*60) * 100));
+    $("#fill").style.clipPath = `inset(0 ${(100 - done).toFixed(2)}% 0 0)`;
+    document.title = on ? fmt(left) + " · " + r.mode : "pomo";
 
-document.querySelectorAll(".modes button").forEach(b => {
-  b.addEventListener("click", () => {
-    document.querySelectorAll(".modes button").forEach(x => x.classList.remove("on"));
-    b.classList.add("on");
-    FOCUS = +b.dataset.f*60; BREAK = +b.dataset.b*60;
-    clearInterval(timer); timer = null; mode = "focus"; left = FOCUS;
-    $("startBtn").textContent = "start"; $("kao").textContent = KAO.idle;
-    $("msg").textContent = b.dataset.f + " 分钟一格,适合" + (b.dataset.f==="50"?"深潜":"日常");
+    const sec = Math.floor(Date.now()/60000);
+    if(paint.lastMin !== sec){ paint.lastMin = sec; renderStrip(); }
+  }
+
+  function renderStrip(){
+    const r = run(), list = sessions(dayKey());
+    const base = new Date(); base.setHours(0,0,0,0);
+    const pos = ts => Math.max(0, Math.min(100, (ts - base.getTime())/864e5*100));
+    let html = list.map(x =>
+      `<div class="blk" title="${clock(x.s)}–${clock(x.e)} · ${x.m}min" style="left:${pos(x.s).toFixed(2)}%;width:${(pos(x.e)-pos(x.s)).toFixed(2)}%"></div>`
+    ).join("");
+    if(r.mode === "focus" && r.began && running()){
+      html += `<div class="blk live" style="left:${pos(r.began).toFixed(2)}%;width:${(pos(Date.now())-pos(r.began)).toFixed(2)}%"></div>`;
+    }
+    html += `<div class="now-mark" style="left:${pos(Date.now()).toFixed(2)}%"></div>`;
+    $("#strip").innerHTML = html;
+  }
+
+  function renderAll(){
+    const s = read(), r = run(), list = sessions(dayKey()), on = running();
+    const mins = list.reduce((a,x) => a + x.m, 0);
+
+    $("#date").textContent =
+      new Date().toLocaleDateString("en-GB",{ day:"2-digit", month:"short" }).toLowerCase();
+    $("#date").dataset.k = dayKey();
+
+    $("#glyph").className = "glyph " + r.mode;
+    $("#glyph").textContent = r.mode === "focus" ? "●" : "○";
+    const paused = !on && r.began;
+    $("#phase").innerHTML = (r.mode === "focus" ? "focus" : "break") +
+      (paused ? ` <span class="sub">· paused</span>` : "");
+
+    $("#meta").innerHTML =
+      `<span>${list.length} ${list.length === 1 ? "exposure" : "exposures"}</span>` +
+      `<span>${mins ? dur(mins) : "0m"} today</span>`;
+
+    $("#bar").className = "bar " + r.mode;
+    $("#bl").textContent = on ? "ends " + clock(r.endAt)
+                         : paused ? fmt(r.left) + " left"
+                         : r.plan + " min " + r.mode;
+    $("#br").textContent = s.goal ? list.length + " / " + s.goal : "";
+
+    $("#go").textContent = on ? "pause" : paused ? "resume" : "start";
+    $("#msg").textContent = msg;
+
+    document.querySelectorAll(".modes button").forEach(b =>
+      b.classList.toggle("on", +b.dataset.f === s.focus && +b.dataset.b === s.brk));
+
+    // last 7 days
+    const goalMin = Math.max(1, s.goal * s.focus);
+    const wk = [], dow = [];
+    for(let i=6; i>=0; i--){
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const l = s.days[dayKey(d)] || [];
+      const m = l.reduce((a,x) => a + x.m, 0);
+      const hit = s.goal && l.length >= s.goal;
+      wk.push(`<div class="wbar${i===0?" today":""}${hit?" hit":""}" title="${l.length} · ${dur(m)}"><i style="height:${Math.min(100, m/goalMin*100)}%"></i></div>`);
+      dow.push(`<span>${d.toLocaleDateString("en-GB",{ weekday:"narrow" }).toLowerCase()}</span>`);
+    }
+    $("#week").innerHTML = wk.join("");
+    $("#wdow").innerHTML = dow.join("");
+
+    $("#sFocus").value = s.focus;
+    $("#sBreak").value = s.brk;
+    $("#sGoal").value  = s.goal;
+
+    const pal = s.pal || "dusk";
+    document.documentElement.dataset.pal = pal;
+    document.querySelectorAll(".pal button").forEach(b =>
+      b.classList.toggle("on", b.dataset.pal === pal));
+
+    paint.lastMin = null;
     paint();
-  });
-});
+  }
 
-paint();
+  /* ── settings ── */
+  function applyLengths(f, b){
+    const s = read();
+    s.focus = f; s.brk = b;
+    if(untouched()){ setPhase(run().mode); msg = f + " 分钟一格，适合" + (f >= 45 ? "深潜" : "日常"); }
+    else msg = "新时长从下一格开始";
+    write(); renderAll();
+  }
+
+  document.querySelectorAll(".modes button").forEach(b =>
+    b.onclick = () => applyLengths(+b.dataset.f, +b.dataset.b));
+
+  const num = (el, lo, hi) => {
+    const v = parseInt(el.value, 10);
+    return isNaN(v) ? null : Math.max(lo, Math.min(hi, v));
+  };
+  $("#sFocus").onchange = e => { const v = num(e.target,1,180); v ? applyLengths(v, read().brk) : renderAll(); };
+  $("#sBreak").onchange = e => { const v = num(e.target,1,60);  v ? applyLengths(read().focus, v) : renderAll(); };
+  $("#sGoal").onchange  = e => { const v = num(e.target,0,24);  if(v != null){ read().goal = v; write(); } renderAll(); };
+
+  document.querySelectorAll(".pal button").forEach(b =>
+    b.onclick = () => { read().pal = b.dataset.pal; write(); renderAll(); });
+
+  /* ── wiring ── */
+  $("#go").onclick    = () => running() ? pause() : start();
+  $("#reset").onclick = reset;
+  $("#skip").onclick  = skip;
+  document.addEventListener("keydown", e => {
+    if(e.code === "Space" && !/INPUT|BUTTON/.test(e.target.tagName)){
+      e.preventDefault(); running() ? pause() : start();
+    }
+  });
+
+  prune();
+  if(running()){
+    if(remaining() <= 0) complete(true);
+    else { msg = run().mode === "focus" ? "专注中 · 别开新 tab 哦" : "break · 离屏幕远一点"; spin(); }
+  }
+  write(); renderAll();
+
+  // roll over at midnight
+  setInterval(() => { if($("#date").dataset.k !== dayKey()) renderAll(); }, 60000);
+})();
 </script>
 </body>
 </html>
